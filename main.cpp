@@ -165,9 +165,12 @@ void ProcessTable::removeProcess(Process process) {
 }
 
 int nowTime = 0; // 当前时间
+ProcessTable processTable; // 创建一个全局的系统进程表对象
+queue<Process> firstQueue, secondQueue, thirdQueue;
 
-// 显示当前系统进程表
+// 显示当前系统进程表和各级队列
 void ProcessTable::display() {
+    cout << endl;
     // 空表
     if (processes.empty()) {
         cout << "all processes have finished running" << endl;
@@ -199,24 +202,61 @@ void ProcessTable::display() {
         }
         completedProcess.clear(); // 清空名单
     }
+    cout  << endl << "Queue1 | ";
+    if (!firstQueue.empty()) {
+        for (int i = 0; i < firstQueue.size(); i++) {
+            cout << firstQueue.front().getPCB()->getProcessName();
+            Process *process = &(firstQueue.front());
+            firstQueue.pop();
+            firstQueue.push(*process);
+            if (i != firstQueue.size() - 1) {
+                cout << "<---";
+            }
+        }
+    }
+    cout << " |" << endl << "Queue2 | ";
+    if (!secondQueue.empty()) {
+        for (int i = 0; i < secondQueue.size(); i++) {
+            cout << secondQueue.front().getPCB()->getProcessName();
+            Process *process = &(secondQueue.front());
+            secondQueue.pop();
+            secondQueue.push(*process);
+            if (i != secondQueue.size() - 1) {
+                cout << "<---";
+            }
+        }
+    }
+    cout << " |" << endl << "Queue3 | ";
+    if (!thirdQueue.empty()) {
+        for (int i = 0; i < thirdQueue.size(); i++) {
+            cout << thirdQueue.front().getPCB()->getProcessName();
+            Process *process = &(thirdQueue.front());
+            thirdQueue.pop();
+            thirdQueue.push(*process);
+            if (i != thirdQueue.size() - 1) {
+                cout << "<---";
+            }
+        }
+    }
+    cout << " |" << endl;
+    cout << endl;
 }
 
-ProcessTable processTable; // 创建一个全局的系统进程表对象
-queue<Process> firstQueue, secondQueue, thirdQueue;
+
 
 // 采用多级反馈队列调度算法运行若干时间片
 void Run(int time) {
     for (int i = 0; i < time;) {
 //        vector<Process> processes = processTable.getProcesses(); // 获取当前系统进程表
         // 循环系统进程表
-        for (int j = 0; j < processTable.getProcesses().size(); j++) {
-            PCB *pcb = processTable.getProcesses()[j].getPCB(); // 获取PCB
-            // 如果到达时间等于当前时间，说明该进程刚刚到达，将其放入第1级队列的队尾
-            if (pcb->getArriveTime() == nowTime) {
-                firstQueue.push(processTable.getProcesses()[j]);
-                processTable.getProcesses()[j].getPCB()->setStatus('R'); // 设置状态为运行态
-            }
-        }
+//        for (int j = 0; j < processTable.getProcesses().size(); j++) {
+//            PCB *pcb = processTable.getProcesses()[j].getPCB(); // 获取PCB
+//            // 如果到达时间等于当前时间，说明该进程刚刚到达，将其放入第1级队列的队尾
+//            if (pcb->getArriveTime() == nowTime) {
+//                firstQueue.push(processTable.getProcesses()[j]);
+//                processTable.getProcesses()[j].getPCB()->setStatus('R'); // 设置状态为运行态
+//            }
+//        }
         // 只要第1队队列不空，就持续对第1队队列中的进程调度并分配时间片
         if (!firstQueue.empty()) {
             // 此时已经进入第1队队列中，如果第2、3队队列不空，说明上次时间片分配给的是第2、3队队列的进程，此时需要将处于第2、3队队列中的进程的持续运行记录清0
@@ -294,7 +334,7 @@ void Run(int time) {
                 process->setContinuation(process->getContinuation() + 1); // 当前进程连续运行时间的记录增加
                 // 若进程完成
                 if (pcb->getUsedTime() == pcb->getTotalTime()) {
-                    cout << pcb->getProcessName() << " pop from secondQueue" << endl;
+//                    cout << pcb->getProcessName() << " pop from secondQueue" << endl;
                     pcb->setStatus('F');
                     secondQueue.pop(); // 从第2队队列中弹出该进程
                     process = &(secondQueue.front()); // 切换下一个进程
@@ -303,7 +343,7 @@ void Run(int time) {
                 }
                 // 若到达第2队队列所能分配的最大时间片
                 if (process->getContinuation() == 2) {
-                    cout << pcb->getProcessName() << " remove to thirdQueue from secondQueue" << endl;
+//                    cout << pcb->getProcessName() << " remove to thirdQueue from secondQueue" << endl;
                     process->setContinuation(0); // 发生进程调度，进程连续运行时间记录清0
                     thirdQueue.push(*process); // 将该进程放入第3队队列
                     secondQueue.pop(); // 将该进程从第2队队列中弹出
@@ -380,6 +420,8 @@ void addProcess() {
     PCB pcb(processName, arriveTime, totalTime); // 创建PCB对象
     Process process(&pcb); // 创建进程对象
     processTable.insertProcess(process); // 将进程放入系统进程表中
+    process.getPCB()->setStatus('R');
+    firstQueue.push(process);
     menu();
 }
 
