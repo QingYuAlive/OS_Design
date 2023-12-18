@@ -221,7 +221,13 @@ void Run(int time) {
         if (!firstQueue.empty()) {
             // 此时已经进入第1队队列中，如果第2、3队队列不空，说明上次时间片分配给的是第2、3队队列的进程，此时需要将处于第2、3队队列中的进程的持续运行记录清0
             if (!secondQueue.empty()) {
-                for (int j = 0; j < secondQueue.size(); j++) {
+//                for (int j = 0; j < secondQueue.size(); j++) {
+//                    Process *process = &(secondQueue.front());
+//                    process->setContinuation(0);
+//                    secondQueue.pop();
+//                    secondQueue.push(*process); // 这一行和上一行的顺序不能调换，他们操作的是同一个process对象
+//                }
+                if (secondQueue.front().getContinuation() != 0) {
                     Process *process = &(secondQueue.front());
                     process->setContinuation(0);
                     secondQueue.pop();
@@ -229,7 +235,13 @@ void Run(int time) {
                 }
             }
             if (!thirdQueue.empty()) {
-                for (int j = 0; j < thirdQueue.size(); j++) {
+//                for (int j = 0; j < thirdQueue.size(); j++) {
+//                    Process *process = &(thirdQueue.front());
+//                    process->setContinuation(0);
+//                    thirdQueue.pop();
+//                    thirdQueue.push(*process); // 这一行和上一行的顺序不能调换，他们操作的是同一个process对象
+//                }
+                if (thirdQueue.front().getContinuation() != 0) {
                     Process *process = &(thirdQueue.front());
                     process->setContinuation(0);
                     thirdQueue.pop();
@@ -256,11 +268,17 @@ void Run(int time) {
         } else if (!secondQueue.empty()) {
             // 同上，此时已经进入第2队队列中，如果第3队队列不空，此时需要将处于第3队队列中的进程的持续运行记录清0
             if (!thirdQueue.empty()) {
-                for (int j = 0; j < thirdQueue.size(); j++) {
+//                for (int j = 0; j < thirdQueue.size(); j++) {
+//                    Process *process = &(thirdQueue.front());
+//                    process->setContinuation(0);
+//                    thirdQueue.pop();
+//                    thirdQueue.push(*process);
+//                }
+                if (thirdQueue.front().getContinuation() != 0) {
                     Process *process = &(thirdQueue.front());
                     process->setContinuation(0);
                     thirdQueue.pop();
-                    thirdQueue.push(*process);
+                    thirdQueue.push(*process); // 这一行和上一行的顺序不能调换，他们操作的是同一个process对象
                 }
             }
 //            cout << "firstQueueEmpty!" << endl;
