@@ -3,6 +3,10 @@
 #include <vector>
 #include <iomanip>
 #include <queue>
+#define firstQueueTime 1
+#define secondQueueTime 2
+#define thirdQueueTime 4
+
 
 using namespace std;
 
@@ -166,7 +170,7 @@ void ProcessTable::removeProcess(Process process) {
 
 int nowTime = 0; // 当前时间
 ProcessTable processTable; // 创建一个全局的系统进程表对象
-queue<Process> firstQueue, secondQueue, thirdQueue;
+queue<Process> firstQueue, secondQueue, thirdQueue; // 三级队列
 
 // 显示当前系统进程表和各级队列
 void ProcessTable::display() {
@@ -202,7 +206,8 @@ void ProcessTable::display() {
         }
         completedProcess.clear(); // 清空名单
     }
-    cout  << endl << "Queue1 | ";
+    // 显示第1级队列情况
+    cout << endl << "Queue1 | ";
     if (!firstQueue.empty()) {
         for (int i = 0; i < firstQueue.size(); i++) {
             cout << firstQueue.front().getPCB()->getProcessName();
@@ -214,6 +219,7 @@ void ProcessTable::display() {
             }
         }
     }
+    // 显示第2级队列情况
     cout << " |" << endl << "Queue2 | ";
     if (!secondQueue.empty()) {
         for (int i = 0; i < secondQueue.size(); i++) {
@@ -226,6 +232,7 @@ void ProcessTable::display() {
             }
         }
     }
+    // 显示第3级队列情况
     cout << " |" << endl << "Queue3 | ";
     if (!thirdQueue.empty()) {
         for (int i = 0; i < thirdQueue.size(); i++) {
@@ -242,10 +249,9 @@ void ProcessTable::display() {
     cout << endl;
 }
 
-
-
 // 采用多级反馈队列调度算法运行若干时间片
 void Run(int time) {
+    // 模拟时间流逝
     for (int i = 0; i < time;) {
 //        vector<Process> processes = processTable.getProcesses(); // 获取当前系统进程表
         // 循环系统进程表
@@ -268,8 +274,9 @@ void Run(int time) {
 //                    secondQueue.push(*process); // 这一行和上一行的顺序不能调换，他们操作的是同一个process对象
 //                }
                 if (secondQueue.front().getContinuation() != 0) {
-                    Process *process = &(secondQueue.front());
-                    process->setContinuation(0);
+                    Process *process = &(secondQueue.front()); // 获取第2级队列队头进程
+                    process->getPCB()->setStatus('W'); // 发生调度后变为等待态
+                    process->setContinuation(0); // 连续运行时间清0
                     secondQueue.pop();
                     secondQueue.push(*process); // 这一行和上一行的顺序不能调换，他们操作的是同一个process对象
                 }
@@ -282,8 +289,9 @@ void Run(int time) {
 //                    thirdQueue.push(*process); // 这一行和上一行的顺序不能调换，他们操作的是同一个process对象
 //                }
                 if (thirdQueue.front().getContinuation() != 0) {
-                    Process *process = &(thirdQueue.front());
-                    process->setContinuation(0);
+                    Process *process = &(thirdQueue.front()); // 获取第3级队列队头进程
+                    process->getPCB()->setStatus('W'); // 发生调度后变为等待态
+                    process->setContinuation(0); // 连续运行时间清0
                     thirdQueue.pop();
                     thirdQueue.push(*process); // 这一行和上一行的顺序不能调换，他们操作的是同一个process对象
                 }
@@ -292,14 +300,16 @@ void Run(int time) {
             i++; // 模拟分配了时间片=1的CPU时间
             Process &process = firstQueue.front(); // 获取第1队队列首进程
             PCB *pcb = process.getPCB(); // 获取该进程的PCB
+            pcb->setStatus('R'); // 进程上处理机运行转为运行态
             pcb->setUsedTime(pcb->getUsedTime() + 1); // 已用CPU时间+1
-            process.setContinuation(process.getContinuation() + 1);
+            process.setContinuation(process.getContinuation() + 1); // 连续运行时间+1
             // 如果运行完成
             if (pcb->getUsedTime() == pcb->getTotalTime()) {
                 firstQueue.pop(); // 弹出第1队队列
-                pcb->setStatus('F');
+                pcb->setStatus('F'); // 状态设置为完成态
             } else {
                 // 由于第一队队列的时间片为1，因此不用考虑已占用CPU时间大于需要运行时间的情况，此时考虑该进程未完成的情况
+                pcb->setStatus('W'); // 发生进程调度变为等待态
                 process.setContinuation(0); // 发生调度，需要将进程的持续运行记录清0
                 secondQueue.push(process); // 放入第2队队列的队尾
 //                cout << process.getContinuation() << endl;
@@ -315,8 +325,9 @@ void Run(int time) {
 //                    thirdQueue.push(*process);
 //                }
                 if (thirdQueue.front().getContinuation() != 0) {
-                    Process *process = &(thirdQueue.front());
-                    process->setContinuation(0);
+                    Process *process = &(thirdQueue.front()); // 获取第3级队列队首进程
+                    process->getPCB()->setStatus('W'); // 获取该进程的PCB
+                    process->setContinuation(0); // 连续运行时间清0
                     thirdQueue.pop();
                     thirdQueue.push(*process); // 这一行和上一行的顺序不能调换，他们操作的是同一个process对象
                 }
@@ -330,20 +341,22 @@ void Run(int time) {
             while (!secondQueue.empty() && i != time) {
                 i++; // 模拟分配了时间片=1的CPU时间
                 nowTime++; // 当前时间增加
+                pcb->setStatus('R'); // 将状态设置为运行态
                 pcb->setUsedTime(pcb->getUsedTime() + 1); // 当前进程已占用CPU时间增加
                 process->setContinuation(process->getContinuation() + 1); // 当前进程连续运行时间的记录增加
                 // 若进程完成
                 if (pcb->getUsedTime() == pcb->getTotalTime()) {
 //                    cout << pcb->getProcessName() << " pop from secondQueue" << endl;
-                    pcb->setStatus('F');
+                    pcb->setStatus('F'); // 将状态设置为完成态
                     secondQueue.pop(); // 从第2队队列中弹出该进程
                     process = &(secondQueue.front()); // 切换下一个进程
                     pcb = process->getPCB(); // 获取该进程PCB
-                    continue;
+                    continue; // 跳过后续处理
                 }
-                // 若到达第2队队列所能分配的最大时间片
-                if (process->getContinuation() == 2) {
+                // 若达到第2队队列所能分配的最大时间片
+                if (process->getContinuation() == secondQueueTime) {
 //                    cout << pcb->getProcessName() << " remove to thirdQueue from secondQueue" << endl;
+                    pcb->setStatus('W'); // 发生进程调度状态变为等待态
                     process->setContinuation(0); // 发生进程调度，进程连续运行时间记录清0
                     thirdQueue.push(*process); // 将该进程放入第3队队列
                     secondQueue.pop(); // 将该进程从第2队队列中弹出
@@ -351,7 +364,6 @@ void Run(int time) {
                     pcb = process->getPCB(); // 获取该进程的PCB
                 }
             }
-
         } else {
 //            cout << "secondQueueEmpty" << endl;
             // 当其他队列为空时便对第3队队列中的进程进行调度并分配时间片
@@ -361,33 +373,38 @@ void Run(int time) {
             while (!thirdQueue.empty() && i != time) {
                 i++;
                 nowTime++;
-                pcb->setUsedTime(pcb->getUsedTime() + 1);
-                process->setContinuation(process->getContinuation() + 1);
+                pcb->setStatus('R'); // 状态变为运行态
+                pcb->setUsedTime(pcb->getUsedTime() + 1); // 当前进程已占用CPU时间增加
+                process->setContinuation(process->getContinuation() + 1); // 当前进程连续运行时间的记录增加
+                // 若进程完成
                 if (pcb->getUsedTime() == pcb->getTotalTime()) {
-                    cout << pcb->getProcessName() << " pop from thirdQueue" << endl;
-                    pcb->setStatus('F');
-                    thirdQueue.pop();
-                    process = &(thirdQueue.front());
-                    pcb = process->getPCB();
-                    continue;
+//                    cout << pcb->getProcessName() << " pop from thirdQueue" << endl;
+                    pcb->setStatus('F'); // 将状态设置为完成态
+                    thirdQueue.pop(); // 从第3级队列中弹出该进程
+                    process = &(thirdQueue.front()); // 切换下一个进程
+                    pcb = process->getPCB();// 获取该进程的PCB
+                    continue; // 跳过后续处理
                 }
-                if (process->getContinuation() == 4) {
-                    cout << pcb->getProcessName() << " remove to the end" << endl;
-                    process->setContinuation(0);
+                // 若达到第3级队列所能分配的最大时间片
+                if (process->getContinuation() == thirdQueueTime) {
+//                    cout << pcb->getProcessName() << " remove to the end" << endl;
+                    pcb->setStatus('W'); // 发生进程调度状态变为等待态
+                    process->setContinuation(0); // 连续运行时间清0
                     thirdQueue.pop();
                     thirdQueue.push(*process); // 这一行和上一行顺序不能调换，他们操作的是同一个process对象
-                    process = &(thirdQueue.front());
-                    pcb = process->getPCB();
+                    process = &(thirdQueue.front()); // 切换下一个进程
+                    pcb = process->getPCB(); // 获取该进程的PCB
                 }
             }
+            // 所有进程运行完成
             if (thirdQueue.empty()) {
                 nowTime += time - i;
-                i = time;
+                i = time; // 直接结束
             }
         }
     }
-    processTable.display();
-    menu();
+    processTable.display(); // 打印进程信息
+    menu(); // 返回菜单
 }
 
 //void input() {
@@ -413,21 +430,22 @@ void Run(int time) {
 void addProcess() {
     string processName; // 进程名
     int arriveTime = nowTime, totalTime; // 到达时间、所需要总时间
-    cout << "processName:";
+    cout << "processName: ";
     cin >> processName;
-    cout << "totalTime:";
+    cout << "totalTime: ";
     cin >> totalTime;
     PCB pcb(processName, arriveTime, totalTime); // 创建PCB对象
     Process process(&pcb); // 创建进程对象
     processTable.insertProcess(process); // 将进程放入系统进程表中
-    process.getPCB()->setStatus('R');
+    process.getPCB()->setStatus('W');
     firstQueue.push(process);
+    processTable.display();
     menu();
 }
 
 // 系统运行菜单
 void systemRun() {
-    cout << "run time:";
+    cout << "run time: ";
     int runTime;
     cin >> runTime; // 单次运行时间
     Run(runTime);
